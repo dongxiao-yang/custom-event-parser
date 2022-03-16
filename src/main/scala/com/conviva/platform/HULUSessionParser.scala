@@ -13,22 +13,57 @@ import org.joda.time.DateTime
 
 import scala.collection.mutable
 import scala.collection.JavaConverters._
+import scala.collection.mutable.ListBuffer
 
 object HULUSessionParser {
   val DEFAULT_SEPARATOR = '\t'
   val DEFAULT_LINE_END = "\n"
   val quote = "'"
+  val tag_separator_old="\\."
+  val tag_separator_new="_"
+
+  val numBucketsPerPeriod = 60
+  val encodedBucketBits = Integer.SIZE - Integer.numberOfLeadingZeros(numBucketsPerPeriod)
+  val encodedBucketMask = (1 << encodedBucketBits) - 1
+
+
+  private def peekLastBucket(encodedIntervals: Long): Int = encodedIntervals.toInt & encodedBucketMask
+
+  private def removeLastBucket(encodedIntervals: Long): Long = encodedIntervals >> encodedBucketBits
+
+
+  def decodePcp(encodedIntervals: Long): String = {
+    val result = new ListBuffer[Int]()
+    var flag = encodedIntervals
+    while (flag != 0) {
+      val endBucket = peekLastBucket(flag)
+      flag = removeLastBucket(flag)
+      val startBucket = peekLastBucket(flag)
+      flag = removeLastBucket(flag)
+      for (play_minute <- startBucket until endBucket) {
+        result += play_minute
+      }
+    }
+    val array = result.toList.toArray
+
+    val ret = array.mkString("[", ",", "]")
+    ret
+
+  }
 
   def main(args: Array[String]): Unit = {
 
-    val spark: SparkSession = SparkSession.builder.appName("hulu-reader")
+    val spark = SparkSession.builder.appName("hulu-reader")
 
-      .master("local[10]").getOrCreate()
+      .master("local[12]").getOrCreate()
 
-    val inputpath = args(0)
-    val outputpath = args(1)
+        val inputpath = args(0)
+        val outputpath = args(1)
 
-    val data: RDD[String] = spark.read.textFile(inputpath).rdd
+//    val inputpath = "hulu.txt"
+//    val outputpath = "a.tsv"
+
+    val data = spark.read.textFile(inputpath).rdd
     data.map(parseSession(_)).saveAsTextFile(outputpath)
 
   }
@@ -228,7 +263,11 @@ object HULUSessionParser {
       else if ("switch.seekJoinTimeMs" == nodeName) cs.setSwitch_seekJoinTimeMs(valueStr.toInt)
       else if ("switch.seekJoinCount" == nodeName) cs.setSwitch_seekJoinCount(valueStr.toInt)
       else if ("switch.pcpBuckets1Min" == nodeName) cs.setSwitch_pcpBuckets1Min(jn.getValue.toString)
-      else if ("switch.pcpIntervals" == nodeName) cs.setSwitch_pcpIntervals(valueStr.toLong)
+      else if ("switch.pcpIntervals" == nodeName) {
+        cs.setSwitch_pcpIntervals(valueStr.toLong)
+        val pcpBuckets1Min = decodePcp(valueStr.toLong)
+        cs.setSwitch_pcpBuckets1Min(pcpBuckets1Min)
+      }
       else if ("switch.rebufferingTimeMsRaw" == nodeName) cs.setSwitch_rebufferingTimeMs(valueStr.toInt)
       else if ("switch.networkRebufferingTimeMsRaw" == nodeName) cs.setSwitch_networkRebufferingTimeMsRaw(valueStr.toInt)
       else if ("switch.isVideoPlaybackFailureBusiness" == nodeName) {
@@ -273,71 +312,95 @@ object HULUSessionParser {
       else if ("bucket.contentWatchedPct" == nodeName) cs.setBucket_contentWatchedPct(valueStr.toFloat)
       else if ("tags.m3.dv.hwt" == nodeName) cs.setM3_dv_hwt(valueStr)
       else if ("tags.m3.dv.mrk" == nodeName) cs.setM3_dv_mrk(valueStr)
-      else if ("tags.c3_video_isad" == nodeName) cs.setC3_video_isad(valueStr)
-      else if ("tags.c3_ad_id" == nodeName) cs.setC3_ad_id(valueStr)
-//      else if ("tags.c3_ad_position" == nodeName) cs.
-//      else if ("tags.c3_ad_system" == nodeName) cs.
-//      else if ("tags.c3_ad_technology" == nodeName) cs.
-//      else if ("tags.c3_ad_isslate" == nodeName) cs.
-//      else if ("tags.c3_ad_adstitcher" == nodeName) cs.
-//      else if ("tags.c3_ad_creativeid" == nodeName) cs.
-//      else if ("tags.c3_ad_breakid" == nodeName) cs.
-//      else if ("tags.c3_ad_contentassetname" == nodeName) cs.
-//      else if ("tags.c3_pt_ver" == nodeName) cs.
-//      else if ("tags.c3_device_ua" == nodeName) cs.
-//      else if ("tags.c3_adaptor_type" == nodeName) cs.
-//      else if ("tags.c3_protocol_level" == nodeName) cs.
-//      else if ("tags.c3_protocol_pure" == nodeName) cs.
-//      else if ("tags.c3_pt_os_ver" == nodeName) cs.
-//      else if ("tags.c3_device_manufacturer" == nodeName) cs.
-//      else if ("tags.c3_device_brand" == nodeName) cs.
-//      else if ("tags.c3_device_model" == nodeName) cs.
-//      else if ("tags.c3_device_conn" == nodeName) cs.
-//      else if ("tags.c3_device_ver" == nodeName) cs.
-//      else if ("tags.c3_go_algoid" == nodeName) cs.
-//      else if ("tags.c3_player_name" == nodeName) cs.
-//      else if ("tags.c3_de_rs_raw" == nodeName) cs.
-//      else if ("tags.c3_de_bitr" == nodeName) cs.
-//      else if ("tags.c3_de_rsid" == nodeName) cs.
-//      else if ("tags.c3_de_cdn" == nodeName) cs.
-//      else if ("tags.c3_de_rs" == nodeName) cs.
-//      else if ("tags.c3_device_cver" == nodeName) cs.
-//      else if ("tags.c3_device_cver_bld" == nodeName) cs.
-//      else if ("tags.c3_video_islive" == nodeName) cs.
-//      else if ("tags.c3_viewer_id" == nodeName) cs.
-//      else if ("tags.c3_client_hwtype" == nodeName) cs.
-//      else if ("tags.c3_client_osname" == nodeName) cs.
-//      else if ("tags.c3_client_manufacturer" == nodeName) cs.
-//      else if ("tags.c3_client_brand" == nodeName) cs.
-//      else if ("tags.c3_client_marketingname" == nodeName) cs.
-//      else if ("tags.c3_client_model" == nodeName) cs.
-//      else if ("tags.c3_client_osv" == nodeName) cs.
-//      else if ("tags.c3_client_osf" == nodeName) cs.
-//      else if ("tags.c3_client_br" == nodeName) cs.
-//      else if ("tags.c3_client_brv" == nodeName) cs.
-//      else if ("tags.m3_dv_mnf" == nodeName) cs.
-//      else if ("tags.m3_dv_n" == nodeName) cs.
-//      else if ("tags.m3_dv_os" == nodeName) cs.
-//      else if ("tags.m3_dv_osv" == nodeName) cs.
-//      else if ("tags.m3_dv_osf" == nodeName) cs.
-//      else if ("tags.m3_dv_br" == nodeName) cs.
-//      else if ("tags.m3_dv_brv" == nodeName) cs.
-//      else if ("tags.m3_dv_fw" == nodeName) cs.
-//      else if ("tags.m3_dv_fwv" == nodeName) cs.
-//      else if ("tags.m3_dv_mod" == nodeName) cs.
-//      else if ("tags.m3_dv_vnd" == nodeName) cs.
-//      else if ("tags.m3_net_t" == nodeName) cs.
-//      else if ("tags.c3_protocol_type" == nodeName) cs.
-//      else if ("tags.c3_device_type" == nodeName) cs.
-//      else if ("tags.c3_pt_os" == nodeName) cs.
-//      else if ("tags.c3_ft_os" == nodeName) cs.
-//      else if ("tags.c3_framework" == nodeName) cs.
-//      else if ("tags.c3_framework_ver" == nodeName) cs.
-//      else if ("tags.c3_pt_br" == nodeName) cs.
-//      else if ("tags.c3_pt_br_ver" == nodeName) cs.
-//      else if ("tags.c3_br_v" == nodeName) cs.
+      else if ("tags.c3.video.isAd" == nodeName) {
+        val i = if ("T" == valueStr) "1"
+        else "0"
+        cs.setC3_video_isAd(i)
+      }
+      else if ("tags.c3.ad.id" == nodeName) cs.setC3_ad_id(valueStr)
+      else if ("tags.c3.ad.position" == nodeName) cs.setC3_ad_position(valueStr)
+      else if ("tags.c3.ad.system" == nodeName) cs.setC3_ad_system(valueStr)
+      else if ("tags.c3.ad.technology" == nodeName) cs.setC3_ad_technology(valueStr)
+      else if ("tags.c3.ad.isSlate" == nodeName) cs.setC3_ad_isSlate(valueStr)
+      else if ("tags.c3.ad.adStitcher" == nodeName) cs.setC3_ad_adStitcher(valueStr)
+      else if ("tags.c3.ad.creativeId" == nodeName) cs.setC3_ad_creativeId(valueStr)
+      else if ("tags.c3.ad.breakId" == nodeName) cs.setC3_ad_breakId(valueStr)
+      else if ("tags.c3.ad.contentAssetName" == nodeName) cs.setC3_ad_contentAssetName(valueStr)
+      else if ("tags.c3.pt_ver" == nodeName) cs.setC3_pt_ver(valueStr)
+      else if ("tags.c3.device_ua" == nodeName) cs.setC3_device_ua(valueStr)
+      else if ("tags.c3.adaptor_type" == nodeName) cs.setC3_adaptor_type(valueStr)
+      else if ("tags.c3.protocol.level" == nodeName) cs.setC3_protocol_level(valueStr)
+      else if ("tags.c3.protocol.pure" == nodeName) cs.setC3_protocol_pure(valueStr)
+      else if ("tags.c3.pt.os.ver" == nodeName) cs.setC3_pt_os_ver(valueStr)
+      else if ("tags.c3.device.manufacturer" == nodeName) cs.setC3_device_manufacturer(valueStr)
+      else if ("tags.c3.device.brand" == nodeName) cs.setC3_device_brand(valueStr)
+      else if ("tags.c3.device.model" == nodeName) cs.setC3_device_model(valueStr)
+      else if ("tags.c3.device.conn" == nodeName) cs.setC3_device_conn(valueStr)
+      else if ("tags.c3.device.ver" == nodeName) cs.setC3_device_ver(valueStr)
+      else if ("tags.c3.go.algoid" == nodeName) cs.setC3_go_algoid(valueStr)
+      else if ("tags.c3.player.name" == nodeName) cs.setC3_player_name(valueStr)
+      else if ("tags.c3.de.rs.raw" == nodeName) cs.setC3_de_rs_raw(valueStr)
+      else if ("tags.c3.de.bitr" == nodeName) cs.setC3_de_bitr(valueStr)
+      else if ("tags.c3.de.rsid" == nodeName) cs.setC3_de_rsid(valueStr)
+      else if ("tags.c3.de.cdn" == nodeName) cs.setC3_de_cdn(valueStr)
+      else if ("tags.c3.de.rs" == nodeName) cs.setC3_de_rs(valueStr)
+      else if ("tags.c3.device.cver" == nodeName) cs.setC3_device_cver(valueStr)
+      else if ("tags.c3.device.cver.bld" == nodeName) cs.setC3_device_cver_bld(valueStr)
+      else if ("tags.c3.video.isLive" == nodeName) {
+        val i = if ("T" == valueStr) "1"
+        else "0"
+        cs.setC3_video_isLive(i)
+      }
+      else if ("tags.c3.viewer.id" == nodeName) cs.setC3_viewer_id(valueStr)
+      else if ("tags.c3.client.hwType" == nodeName) cs.setC3_client_hwType(valueStr)
+      else if ("tags.c3.client.osname" == nodeName) cs.setC3_client_osname(valueStr)
+      else if ("tags.c3.client.manufacturer" == nodeName) cs.setC3_client_manufacturer(valueStr)
+      else if ("tags.c3.client.brand" == nodeName) cs.setC3_client_brand(valueStr)
+      else if ("tags.c3.client.marketingName" == nodeName) cs.setC3_client_marketingName(valueStr)
+      else if ("tags.c3.client.model" == nodeName) cs.setC3_client_model(valueStr)
+      else if ("tags.c3.client.osv" == nodeName) cs.setC3_client_osv(valueStr)
+      else if ("tags.c3.client.osf" == nodeName) cs.setC3_client_osf(valueStr)
+      else if ("tags.c3.client.br" == nodeName) cs.setC3_client_br(valueStr)
+      else if ("tags.c3.client.brv" == nodeName) cs.setC3_client_brv(valueStr)
+      else if ("tags.m3.dv.mnf" == nodeName) cs.setM3_dv_mnf(valueStr)
+      else if ("tags.m3.dv.n" == nodeName) cs.setM3_dv_n(valueStr)
+      else if ("tags.m3.dv.os" == nodeName) cs.setM3_dv_os(valueStr)
+      else if ("tags.m3.dv.osv" == nodeName) cs.setM3_dv_osv(valueStr)
+      else if ("tags.m3.dv.osf" == nodeName) cs.setM3_dv_osf(valueStr)
+      else if ("tags.m3.dv.br" == nodeName) cs.setM3_dv_br(valueStr)
+      else if ("tags.m3.dv.brv" == nodeName) cs.setM3_dv_brv(valueStr)
+      else if ("tags.m3.dv.fw" == nodeName) cs.setM3_dv_fw(valueStr)
+      else if ("tags.m3.dv.fwv" == nodeName) cs.setM3_dv_fwv(valueStr)
+      else if ("tags.m3.dv.mod" == nodeName) cs.setM3_dv_mod(valueStr)
+      else if ("tags.m3.dv.vnd" == nodeName) cs.setM3_dv_vnd(valueStr)
+      else if ("tags.m3.net.t" == nodeName) cs.setM3_net_t(valueStr)
+      else if ("tags.c3.protocol.type" == nodeName) cs.setC3_protocol_type(valueStr)
+      else if ("tags.c3.device.type" == nodeName) cs.setC3_device_type(valueStr)
+      else if ("tags.c3.pt.os" == nodeName) cs.setC3_pt_os(valueStr)
+      else if ("tags.c3.ft.os" == nodeName) cs.setC3_ft_os(valueStr)
+      else if ("tags.c3.framework" == nodeName) cs.setC3_framework(valueStr)
+      else if ("tags.c3.framework.ver" == nodeName) cs.setC3_framework_ver(valueStr)
+      else if ("tags.c3.pt.br" == nodeName) cs.setC3_pt_br(valueStr)
+      else if ("tags.c3.pt.br.ver" == nodeName) cs.setC3_pt_br_ver(valueStr)
+      else if ("tags.c3_br.v" == nodeName) cs.setC3_br_v(valueStr)
+      else if ("tags.appVersion" == nodeName) cs.setAppVersion(valueStr)
+      else if ("tags.network" == nodeName) cs.setNetwork(valueStr)
+      else if ("tags.stormflowId" == nodeName) cs.setStormflowId(valueStr)
+      else if ("tags.contentType" == nodeName) cs.setContentType(valueStr)
+      else if ("tags.m3.dv.cat" == nodeName) cs.setM3_dv_cat(valueStr)
+      else if ("tags.c3.cp.an" == nodeName) cs.setC3_cp_an(valueStr)
+      else if ("tags.huluPlayerFrameworkName" == nodeName) cs.setHuluPlayerFrameworkName(valueStr)
+      else if ("tags.liveSignalProvider" == nodeName) cs.setLiveSignalProvider(valueStr)
+      else if ("tags.clientFeatureTags" == nodeName) cs.setClientFeatureTags(valueStr)
+      else if ("tags.channel" == nodeName) cs.setChannel(valueStr)
+      else if ("tags.huluPlayerFrameworkVersion" == nodeName) cs.setHuluPlayerFrameworkVersion(valueStr)
+      else if ("tags.startType" == nodeName) cs.setStartType(valueStr)
+      else if ("tags.plt" == nodeName) cs.setPlt(valueStr)
+      else if ("tags.DevOps" == nodeName) cs.setDevOps(valueStr)
+      else if ("tags.conid" == nodeName) cs.setConid(valueStr)
+      else if ("tags.stormflow" == nodeName) cs.setStormflow(valueStr)
       else if (nodeName.startsWith("tags.")) {
-        val key = quote + nodeName.substring(5) + quote
+        val key = quote + nodeName.substring(5).replaceAll(tag_separator_old,tag_separator_new) + quote
         tags.put(key, (quote + valueStr.replaceAll(quote, "") + quote).replaceAll(DEFAULT_LINE_END, ""))
       }
       else {
