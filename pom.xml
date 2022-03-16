@@ -42,24 +42,7 @@
             <version>3.2.2</version>
             <scope>test</scope>
         </dependency>
-
-<!--        <dependency>-->
-<!--            <groupId>com.conviva</groupId>-->
-<!--            <artifactId>tlb_sparkutils_2.11</artifactId>-->
-<!--            <version>5.0.2.0-0a8b71d5-SNAPSHOT</version>-->
-<!--        </dependency>-->
-
-<!--        <dependency>-->
-<!--            <groupId>com.conviva</groupId>-->
-<!--            <artifactId>tlb_datalogicimpl_2.11</artifactId>-->
-<!--            <version>5.0.2.0-0a8b71d5-SNAPSHOT</version>-->
-<!--        </dependency>-->
-
-<!--        <dependency>-->
-<!--            <groupId>com.conviva</groupId>-->
-<!--            <artifactId>tlb_metrics_2.11</artifactId>-->
-<!--            <version>5.0.2.0-0a8b71d5-SNAPSHOT</version>-->
-<!--        </dependency>-->
+        
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-core_2.11</artifactId>
@@ -73,45 +56,6 @@
                         <scope>provided</scope>
         </dependency>
 
-
-<!--        <dependency>-->
-<!--            <groupId>org.rogach</groupId>-->
-<!--            <artifactId>scallop_2.11</artifactId>-->
-<!--            <version>3.1.2</version>-->
-<!--        </dependency>-->
-
-<!--        <dependency>-->
-<!--            <groupId>com.conviva.platform</groupId>-->
-<!--            <artifactId>utils</artifactId>-->
-<!--            <version>2.198.0.6554</version>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>com.conviva.packetbrain</groupId>-->
-<!--            <artifactId>parquet-pb</artifactId>-->
-<!--            <version>6.0.3</version>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>org.apache.parquet</groupId>-->
-<!--            <artifactId>parquet-hadoop</artifactId>-->
-<!--            <version>1.10.1</version>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>javax.servlet</groupId>-->
-<!--            <artifactId>javax.servlet-api</artifactId>-->
-<!--            <version>3.1.0</version>-->
-<!--        </dependency>-->
-
-<!--        <dependency>-->
-<!--            <groupId>com.conviva.vma</groupId>-->
-<!--            <artifactId>hadoopApps</artifactId>-->
-<!--        </dependency>-->
-
-
-<!--        <dependency>-->
-<!--            <groupId>com.fasterxml.jackson.core</groupId>-->
-<!--            <artifactId>jackson-databind</artifactId>-->
-<!--            <version>2.9.5</version>-->
-<!--        </dependency>-->
 
         <dependency>
             <groupId>com.conviva</groupId>
