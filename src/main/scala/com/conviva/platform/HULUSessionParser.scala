@@ -313,8 +313,8 @@ object HULUSessionParser {
       else if ("tags.m3.dv.hwt" == nodeName) cs.setM3_dv_hwt(valueStr)
       else if ("tags.m3.dv.mrk" == nodeName) cs.setM3_dv_mrk(valueStr)
       else if ("tags.c3.video.isAd" == nodeName) {
-        val i = if ("T" == valueStr) "1"
-        else "0"
+        val i = if ("T" == valueStr) 1
+        else 0
         cs.setC3_video_isAd(i)
       }
       else if ("tags.c3.ad.id" == nodeName) cs.setC3_ad_id(valueStr)
@@ -347,8 +347,8 @@ object HULUSessionParser {
       else if ("tags.c3.device.cver" == nodeName) cs.setC3_device_cver(valueStr)
       else if ("tags.c3.device.cver.bld" == nodeName) cs.setC3_device_cver_bld(valueStr)
       else if ("tags.c3.video.isLive" == nodeName) {
-        val i = if ("T" == valueStr) "1"
-        else "0"
+        val i = if ("T" == valueStr) 1
+        else 0
         cs.setC3_video_isLive(i)
       }
       else if ("tags.c3.viewer.id" == nodeName) cs.setC3_viewer_id(valueStr)
