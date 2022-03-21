@@ -51,6 +51,31 @@ object HULUSessionParser {
 
   }
 
+  def decodePcpWithStartEnd(encodedIntervals: Long): (String,String) = {
+    val startList = new ListBuffer[Int]()
+
+    val endList = new ListBuffer[Int]()
+    var flag = encodedIntervals
+    while (flag != 0) {
+      val endBucket = peekLastBucket(flag)
+      flag = removeLastBucket(flag)
+      val startBucket = peekLastBucket(flag)
+      flag = removeLastBucket(flag)
+//      for (play_minute <- startBucket until endBucket) {
+//        result += play_minute
+//      }
+      startList+=startBucket
+      endList+=endBucket
+    }
+    val startarray = startList.toList.toArray
+    val endarray = endList.toList.toArray
+
+    val startret = startarray.mkString("[", ",", "]")
+    val endret = endarray.mkString("[", ",", "]")
+    (startret,endret)
+
+  }
+
   def main(args: Array[String]): Unit = {
 
     val spark = SparkSession.builder.appName("hulu-reader")
@@ -267,6 +292,11 @@ object HULUSessionParser {
         cs.setSwitch_pcpIntervals(valueStr.toLong)
         val pcpBuckets1Min = decodePcp(valueStr.toLong)
         cs.setSwitch_pcpBuckets1Min(pcpBuckets1Min)
+
+        val(startminutes,endminutes) = decodePcpWithStartEnd(valueStr.toLong)
+
+        cs.setSwitch_pcpStartBuckets1Min(startminutes)
+        cs.setSwitch_pcpEndBuckets1Min(endminutes)
       }
       else if ("switch.rebufferingTimeMsRaw" == nodeName) cs.setSwitch_rebufferingTimeMs(valueStr.toInt)
       else if ("switch.networkRebufferingTimeMsRaw" == nodeName) cs.setSwitch_networkRebufferingTimeMsRaw(valueStr.toInt)
