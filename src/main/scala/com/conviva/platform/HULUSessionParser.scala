@@ -65,7 +65,11 @@ object HULUSessionParser {
 //        result += play_minute
 //      }
       startList+=startBucket
-      endList+=endBucket
+      ///   if (endBucket < numBucketsPerPeriod) {
+      //                bucketDeltas[endBucket]--;
+      //            }
+      // should not contain minute 60 for pcp sum
+      if (endBucket < numBucketsPerPeriod) endList+=endBucket
     }
     val startarray = startList.toList.toArray
     val endarray = endList.toList.toArray
