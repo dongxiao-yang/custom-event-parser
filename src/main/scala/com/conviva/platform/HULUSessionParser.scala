@@ -84,7 +84,7 @@ object HULUSessionParser {
 
     val spark = SparkSession.builder.appName("hulu-reader")
 
-      .master("local[12]").getOrCreate()
+      .master("local[20]").getOrCreate()
 
         val inputpath = args(0)
         val outputpath = args(1)
